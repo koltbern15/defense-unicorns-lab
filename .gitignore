@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+*.tar.zst
+*.zar
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Large files
+zarf-packages/argocd/*.tar.zst
+
+# Environment
+.env
+.env.local
+
+# Temp
+tmp/
+temp/

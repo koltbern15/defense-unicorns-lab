@@ -1,0 +1,26 @@
+# UDS Package CR — the "app registration" of the UDS world.
+# The sso block makes the UDS Operator create an OIDC client in the Keycloak
+# uds realm and wire Authservice + Istio AuthorizationPolicy in front of the app.
+apiVersion: uds.dev/v1alpha1
+kind: Package
+metadata:
+  name: podinfo
+  namespace: lab-sso-app
+spec:
+  sso:
+    - name: "Podinfo Lab SSO"
+      clientId: uds-lab-podinfo
+      redirectUris:
+        - "https://podinfo.uds.dev/login"
+      enableAuthserviceSelector:
+        app: podinfo
+  network:
+    serviceMesh:
+      mode: ambient
+    expose:
+      - service: podinfo
+        selector:
+          app: podinfo
+        gateway: tenant
+        host: podinfo
+        port: 9898

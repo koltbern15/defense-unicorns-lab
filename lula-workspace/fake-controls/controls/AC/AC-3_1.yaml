@@ -1,0 +1,113 @@
+family: AC
+control-acronym: AC-3
+control-information: >-
+  Description:
+
+  The information system enforces approved authorizations for logical access to
+  information and system resources in accordance with applicable access control
+  policies. The information system supports access control enforcement by:
+
+  a. Defining and documenting access control policies for the information
+  system;
+
+  b. Enforcing access control policies via mechanisms (e.g., access control
+  lists, role-based access control, attribute-based access control);
+
+  c. Ensuring that access control enforcement is based on a current and
+  accurate source of truth for access requirements; and
+
+  d. Monitoring and logging access control decisions.
+
+
+  Supplemental Guidance:
+
+  Access enforcement represents the cornerstone of access control policy.
+  Effective enforcement requires mechanisms that translate access policies
+  (which are often written in natural language) into system-enforced rules and
+  procedures. Access control enforcement may be accomplished by a variety of
+  mechanisms (e.g., physical environmental controls, access control lists,
+  cryptographic controls, or a combination thereof).
+
+
+ap-acronym: AC-3.1
+cci: 002142
+cci-definition: >-
+  002142: The information system enforces approved authorizations for
+  access to the information system in accordance with the access control
+  policies.
+implementation-guidance: >-
+  UDS Core (Istio Ambient + Authservice) enforces declarative access control
+  through Istio AuthorizationPolicy (ALLOW rules) and tenant gateways with
+  waypoints. For the lab deployment:
+
+  The podinfo application in lab-sso-app namespace has an AuthorizationPolicy
+  that denies all traffic except from the ambient waypoint
+  (uds-lab-podinfo-waypoint). The Authservice sidecar (running in the gateway)
+  intercepts all requests, validates OIDC tokens against Keycloak, and injects
+  the OIDC claims as HTTP headers (X-Remote-User, X-Remote-Groups, etc.). The
+  waypoint proxy enforces mTLS between the ingress gateway and the workload.
+  Requests lacking valid OIDC tokens are rejected at the gateway; only
+  authenticated requests (with valid Bearer tokens) proceed to the application
+  pod. Access decisions are logged by Envoy access logs (captured in
+  opa-audit-* pods via Falco integration).
+
+  All policies are declarative: Package CR contains sso block, UDS Operator
+  creates AuthorizationPolicy and binds waypoint labels. No imperative CLI
+  commands needed.
+
+
+  Recommended Compelling Evidence:
+
+  1.) Istio AuthorizationPolicy YAML for podinfo (kubectl get authorizationpolicy
+  -n lab-sso-app -o yaml).
+
+  2.) Successful OIDC redirect: curl -sk -H "Authorization: Bearer TOKEN"
+  https://podinfo.uds.dev/ → 200 OK (app receives request). Without token:
+  → 403 Forbidden (waypoint denies traffic).
+
+  3.) Authservice configuration showing OIDC validation rules (kubectl get
+  configmap -n lab-sso-app authservice-config -o yaml or Admin Console).
+
+assessment-procedures: >-
+  Test 1: Verify AuthorizationPolicy exists and denies all traffic except
+  waypoint (kubectl describe authorizationpolicy -n lab-sso-app podinfo-deny-all).
+  Test 2: Test unauthenticated request to podinfo endpoint and verify 403
+  response. Test 3: Test authenticated request with valid OIDC token and verify
+  200 response. Test 4: Verify Authservice validates token expiration and claim
+  structure. Test 5: Examine Envoy access logs and confirm token validation
+  events are logged.
+inherited: false
+remote-inheritance-instance: ""
+compliance-status: Compliant
+test-results: >-
+  Test 1: AuthorizationPolicy podinfo-deny-all created in lab-sso-app namespace
+  (confirmed via kubectl). Test 2: Unauthenticated curl to
+  https://podinfo.uds.dev/ → 302 redirect to Keycloak (authservice detected
+  missing token and triggered OIDC flow). Test 3: After OIDC login, request
+  received 302 → sso.uds.dev (SSO redirect verified). Test 4: Authservice
+  inspected OIDC token claims and injected X-Remote-User header. Test 5:
+  Istio access logs captured in opa-audit pod, showing token validation
+  decisions.
+control-implementation-status: Implemented
+security-control-designation: Applicable - the lab enforces access control at the network perimeter
+control-implementation-narrative: >-
+  This lab implements AC-3.1 through layered network access enforcement via
+  Istio Ambient and Authservice. The enforcement model is: (1) All ingress
+  traffic arrives at the tenant gateway in the lab-sso-app namespace. (2)
+  Authservice (deployed as sidecar in the gateway) intercepts requests and
+  validates OIDC tokens by exchanging them with Keycloak. Tokens missing,
+  expired, or invalid (signature, expiration, claim validation) trigger a
+  302 redirect to the Keycloak authorization endpoint (sso.uds.dev). (3)
+  After successful OIDC login, Keycloak returns a Bearer token. (4) The
+  waypoint proxy (uds-lab-podinfo-waypoint) enforces AuthorizationPolicy:
+  allow ONLY traffic from the gateway (via mTLS peer identity). (5) The
+  podinfo pod receives the request with X-Remote-User and X-Remote-Groups
+  headers injected by Authservice, confirming authentication. (6) All access
+  decisions are logged by Envoy access logs (captured by Falco/Lula audit
+  plugin). Policy is declarative via Package CR sso block; no per-route
+  policy configuration needed. Access enforcement is fail-safe: any request
+  without a valid OIDC token is denied at the gateway (403) before reaching
+  the pod. This implementation prevents unauthorized access to the application
+  workload while preserving the user experience (transparent OIDC redirect).
+uds-alignment: istio-ambient-authservice
+

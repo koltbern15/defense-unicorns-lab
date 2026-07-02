@@ -1,0 +1,55 @@
+# Toy app for the Phase 5 SSO exercise.
+# Namespace is exempted from zarf-agent image rewriting (image comes from ghcr, not the internal registry).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-sso-app
+  labels:
+    zarf.dev/agent: ignore
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: lab-sso-app
+  labels:
+    app: podinfo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: podinfo
+  template:
+    metadata:
+      labels:
+        app: podinfo
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          ports:
+            - containerPort: 9898
+              name: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  namespace: lab-sso-app
+spec:
+  selector:
+    app: podinfo
+  ports:
+    - name: http
+      port: 9898
+      targetPort: 9898

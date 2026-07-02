@@ -1,0 +1,19 @@
+redis-ha:
+  enabled: false
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+redis:
+  image:
+    repository: docker.io/library/redis
+
+server:
+  service:
+    labels:
+      zarf.dev/connect-name: argocd
+    annotations:
+      zarf.dev/connect-description: "The Argocd UI service"

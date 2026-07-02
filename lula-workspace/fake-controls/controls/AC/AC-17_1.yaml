@@ -1,0 +1,112 @@
+family: AC
+control-acronym: AC-17
+control-information: >-
+  Description:
+
+  The organization:
+
+  a. Establishes and implements a policy governing the use of remote access to
+  the information system that addresses purpose, scope, roles, responsibilities,
+  management commitment, coordination among organizational entities, and
+  compliance;
+
+  b. Facilitates remote access methods to the information system;
+
+  c. Documents remote access configuration and connection procedures;
+
+  d. Monitors and controls remote access methods; and
+
+  e. Terminates remote access sessions and connections at the end of sessions.
+
+
+  Supplemental Guidance:
+
+  Remote access is any access to an organizational information system by a user
+  (or an information system) communicating through an external network. External
+  networks include the Internet, dedicated networks, public switched networks,
+  and wireless networks. Users (or processes acting on behalf of users) can
+  request access to organizational information systems via remote login and file
+  transfer capabilities. Organizations must manage and monitor remote access
+  sessions using, for example, automated session monitoring tools,
+  encryption-based secure communications, and end-point protection devices.
+  Organization-wide remote access policies address access implementation and
+  enforcement, such as connection/disconnection of remote access sessions, use
+  of encryption for remote sessions, monitoring of user activities, and
+  documentation of remote access in system audit logs.
+
+
+ap-acronym: AC-17.1
+cci: 002415
+cci-definition: >-
+  002415: The organization establishes a policy governing the use of remote
+  access to the information system.
+implementation-guidance: >-
+  UDS Core enforces remote access security through the Istio Ambient mesh and
+  OIDC authentication flow. Remote access (browser requests to podinfo via
+  https://podinfo.uds.dev) is secured by: (1) mTLS enforcement between the
+  ingress gateway and pod (Istio Ambient waypoint proxy enforces strict mTLS
+  peer identity), (2) OIDC token validation (Authservice exchanges Bearer
+  tokens with Keycloak and validates signature, expiration, claim scope), (3)
+  session termination (Keycloak issues time-limited access tokens; token
+  refresh requires re-authentication; browsers session cookies expire after
+  configurable lifetime). All remote access attempts are logged by Envoy access
+  logs (captured by Falco/Lula audit pipeline) with metadata: source IP, user
+  identity (X-Remote-User header), timestamp, request path, and response code.
+  Remote access is terminated by Keycloak session timeout or explicit logout
+  (DELETE /logout endpoint).
+
+
+  Recommended Compelling Evidence:
+
+  1.) OIDC token inspection showing expiration claim (exp) and scope
+  restrictions (aud, iss claims). 2.) Istio AuthorizationPolicy showing mTLS
+  peer requirement. 3.) Keycloak session timeout configuration (Admin Console >
+  Realm > Sessions > Session Settings). 4.) Envoy access logs showing
+  unauthenticated request rejection (403 Forbidden) prior to reaching pod.
+
+assessment-procedures: >-
+  Test 1: Verify OIDC token carries expiration (exp) claim. Test 2: Attempt
+  remote access with expired token and verify 403 rejection. Test 3: Verify
+  Keycloak session configuration enforces session timeout. Test 4: Establish
+  remote session, wait for session timeout, and verify automatic logout. Test 5:
+  Examine access logs for remote access termination event (session cookie
+  expiration or logout).
+inherited: false
+remote-inheritance-instance: ""
+compliance-status: Compliant
+test-results: >-
+  Test 1: OIDC token from Keycloak includes exp (expiration), aud
+  (podinfo.uds.dev audience), and iss (issuer: https://keycloak.uds.dev/realms/master).
+  Test 2: Authservice rejected request with expired token (403 Forbidden)
+  before pod received it. Test 3: Keycloak realm configured with session
+  timeout of 30 minutes (Admin Console > Realm Settings > Sessions). Test 4:
+  Browser session cookie (keycloak.session) expired after 30 minutes; user
+  redirected to Keycloak login page on next request. Test 5: Envoy access logs
+  captured session termination event: "Unauthenticated=true,
+  Authorization=Bearer expired_token".
+control-implementation-status: Implemented
+security-control-designation: Applicable - OIDC and mTLS provide remote access security boundary
+control-implementation-narrative: >-
+  This lab implements AC-17.1 remote access security through a combination of
+  cryptographic (mTLS, token encryption) and policy-based (OIDC, AuthorizationPolicy)
+  controls. Remote access workflow: (1) User opens browser to
+  https://podinfo.uds.dev (TLS 1.3 establishes encrypted transport). (2)
+  Ingress gateway receives request; Authservice intercepts and validates Bearer
+  token. (3) If token missing or invalid, Authservice redirects to Keycloak
+  OIDC authorization endpoint (sso.uds.dev). (4) User authenticates via
+  Keycloak (username/password prompt); Keycloak issues Bearer token (contains
+  exp, aud, iss, custom claims). (5) Browser follows 302 redirect back to
+  podinfo with Bearer token in Authorization header. (6) Authservice validates
+  token (checks signature via Keycloak JWKS endpoint, verifies expiration and
+  audience claim). (7) Waypoint proxy enforces mTLS: verifies gateway identity
+  via mTLS certificate (mutual TLS peer authentication). (8) Pod receives
+  request with X-Remote-User header (injected by Authservice from token
+  claims). (9) Session termination: Keycloak session expires after 30 minutes
+  (configurable); user browser session cookie cleared; next request to
+  podinfo triggers re-authentication flow. All remote access events logged:
+  successful auth (200), failed auth (403), session expiration. This model
+  ensures: (a) remote access requires valid OIDC credentials, (b) in-transit
+  encryption via TLS and mTLS, (c) automatic session termination after
+  configurable timeout, (d) full audit trail of all remote access attempts.
+uds-alignment: oidc-mtls-remote-access
+

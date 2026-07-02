@@ -1,0 +1,53 @@
+{
+  "name": "iam-governance-lab",
+  "version": "0.0.1",
+  "description": "IAM governance policies mirroring Entra ID Conditional Access patterns - Defense Unicorns practice lab",
+  "keywords": [
+    "pepr",
+    "k8s",
+    "policy-engine",
+    "pepr-module",
+    "security"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "pepr": {
+    "uuid": "iam-governance-lab",
+    "onError": "reject",
+    "webhookTimeout": 10,
+    "customLabels": {
+      "namespace": {
+        "pepr.dev": ""
+      }
+    },
+    "alwaysIgnore": {
+      "namespaces": []
+    },
+    "admission": {
+      "alwaysIgnore": {
+        "namespaces": []
+      }
+    },
+    "watch": {
+      "alwaysIgnore": {
+        "namespaces": []
+      }
+    },
+    "includedFiles": [],
+    "env": {}
+  },
+  "scripts": {
+    "k3d-setup": "k3d cluster delete pepr-dev && k3d cluster create pepr-dev --k3s-arg '--debug@server:0' --wait && kubectl rollout status deployment -n kube-system"
+  },
+  "dependencies": {
+    "pepr": "1.2.2",
+    "undici": "^7.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "overrides": {
+    "brace-expansion": "1.1.11"
+  }
+}

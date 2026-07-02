@@ -1,0 +1,32 @@
+# Test namespace — zarf.dev/agent=ignore keeps the Zarf agent from
+# rewriting image refs to the internal registry in this namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-apps
+  labels:
+    zarf.dev/agent: ignore
+---
+# COMPLIANT: carries cost-center — should be ADMITTED and auto-tagged
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliant-app
+  namespace: lab-apps
+  labels:
+    cost-center: it-2740
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: compliant-app
+  template:
+    metadata:
+      labels:
+        app: compliant-app
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80

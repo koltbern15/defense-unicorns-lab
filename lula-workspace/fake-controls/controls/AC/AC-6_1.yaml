@@ -1,0 +1,106 @@
+family: AC
+control-acronym: AC-6
+control-information: >-
+  Description:
+
+  The organization employs the principle of least privilege for all
+  organizational users, processes acting on behalf of users, and devices.
+  The principle of least privilege is implemented by restricting users,
+  processes, and devices to only the minimum set of resources, functions, or
+  information necessary to accomplish assigned tasks or roles.
+
+
+  Supplemental Guidance:
+
+  Organizations employ least privilege for specific duties and information
+  systems. The principle of least privilege is a cornerstone of effective
+  access control and applies to all access control decisions in the
+  organization. When individuals, processes, or devices are granted access,
+  they are granted only the minimum privileges necessary to accomplish
+  organizational missions or business functions. Several factors consider in
+  implementing least privilege: (1) role-based access control, (2)
+  attribute-based access control, (3) service accounts and credentials,
+  (4) just-in-time access elevation, (5) privileged access management.
+
+
+ap-acronym: AC-6.1
+cci: 002213
+cci-definition: >-
+  002213: The organization limits privileges to change the information system
+  configuration.
+implementation-guidance: >-
+  The lab implements least privilege through two mechanisms: (1) Kubernetes
+  RBAC for administrative access to clusters (Roles/RoleBindings restrict
+  users to specific namespaces and operations; Pepr controller itself runs
+  as a ServiceAccount with minimal permissions to watch Deployments and
+  mutate/validate webhook requests), and (2) Pepr admission policy that
+  enforces tagging baselines. The Pepr capability mutates all Deployments in
+  the lab-apps namespace to add ownership and cost-center labels (baseline
+  governance), and validates that Deployments carry required labels before
+  admission. Non-compliant deployments are rejected at the API server by the
+  Pepr webhook.
+
+  Example: A developer attempting to deploy a Deployment without a
+  cost-center label is denied at the API server with message "Deployments
+  must carry a cost-center label (governance baseline)". Privileged
+  developers (e.g., platform engineers) can deploy without labels if they
+  explicitly request a mutation exception (not shown in this lab, but
+  configurable via Pepr policy override capability).
+
+
+  Recommended Compelling Evidence:
+
+  1.) Pepr capability YAML showing mutate/validate rules for lab-apps
+  namespace (~/projects/defense-unicorns-lab/pepr-module/iam-governance-lab/
+  src/index.ts).
+
+  2.) Kubernetes RBAC role for Pepr controller (kubectl get role -n pepr-system
+  -o yaml).
+
+  3.) Live test: Deployment rejection event log (kubectl describe deployment
+  rogue-app -n lab-apps).
+
+assessment-procedures: >-
+  Test 1: Verify Pepr ServiceAccount has minimal permissions (kubectl get
+  role -n pepr-system pepr-system). Test 2: Attempt to deploy a Deployment
+  without cost-center label and verify admission denial (kubectl apply -f
+  rogue-app.yaml). Test 3: Deploy compliant Deployment (with cost-center
+  label) and verify admission success. Test 4: Inspect mutated Deployment
+  labels and confirm Pepr injected owner and governed-by labels. Test 5:
+  Examine admission webhook logs in Pepr controller pod for deny decisions.
+inherited: false
+remote-inheritance-instance: ""
+compliance-status: Compliant
+test-results: >-
+  Test 1: Compliant Deployment (cost-center=platform-infra) admitted and
+  mutated with labels owner=unassigned, governed-by=pepr-iam-policy. Test 2:
+  Non-compliant Deployment (missing cost-center) denied at admission with
+  message "Deployments must carry a cost-center label (governance
+  baseline)". Test 3: Pepr webhook logs show deny decision with validation
+  failure reason. Test 4: Pepr ServiceAccount role limited to watch
+  Deployments and mutate webhook admission requests (minimal permissions
+  model verified).
+control-implementation-status: Implemented
+security-control-designation: Applicable - tagging/labeling baseline reduces privilege scope for workload deployment
+control-implementation-narrative: >-
+  This lab implements AC-6.1 (least privilege) through mandatory governance
+  labeling enforced by a Pepr admission webhook. All Deployments deployed to
+  the lab-apps namespace must carry a cost-center label (defining the
+  organizational unit responsible for the workload). The Pepr capability
+  defines two rules: (1) Mutate rule: if a Deployment lacks an owner label,
+  inject owner=unassigned (baseline governance). (2) Validate rule: if a
+  Deployment lacks a cost-center label, deny admission with a descriptive
+  error message. This model enforces least privilege by requiring each
+  workload to declare its cost center before deployment; unauthorized
+  deployments (those without proper labeling) are rejected outright. The Pepr
+  controller runs under a ServiceAccount with minimal Kubernetes RBAC
+  permissions (watch Deployments, mutate/validate webhooks only). Developers
+  can only deploy Deployments that pass the Pepr validation policy, ensuring
+  no unlabeled (ungoverned) workloads enter the cluster. This mirrors
+  real-world Conditional Access policies: device compliance is verified
+  before granting access; workload governance is verified before deployment.
+  The policy is declarative and fails safe: if Pepr is unavailable (error
+  behavior: reject), even compliant workloads are blocked (demonstrated in
+  Session 1). This ensures policy is always enforced.
+uds-alignment: pepr-admission-control
+

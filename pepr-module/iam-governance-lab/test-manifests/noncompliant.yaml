@@ -1,0 +1,19 @@
+# NON-COMPLIANT: missing cost-center — should be DENIED by the validate webhook
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rogue-app
+  namespace: lab-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rogue-app
+  template:
+    metadata:
+      labels:
+        app: rogue-app
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine

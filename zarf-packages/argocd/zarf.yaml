@@ -1,0 +1,25 @@
+kind: ZarfPackageConfig
+metadata:
+  name: argocd
+  version: 9.4.4
+  description: |
+    "A Zarf Package that deploys the ArgoCD platform"
+
+components:
+  - name: argocd
+    description: |
+      "Deploys the ArgoCD packaged chart into the cluster"
+    required: true
+    charts:
+      - name: argo-cd
+        version: 9.4.4
+        namespace: argocd
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-baseline
+        valuesFiles:
+          - baseline-values.yaml
+    images:
+      - docker.io/library/redis:8.2.3-alpine
+      - quay.io/argoproj/argocd:v3.3.2
+      # Cosign artifacts for images - argocd
+      - quay.io/argoproj/argocd:sha256-5882f28f7aaeaac397949c4511fdc1ad66c1260af44166ccf7e57aca3d7b9797.att

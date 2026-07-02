@@ -1,0 +1,117 @@
+family: AC
+control-acronym: AC-2
+control-information: >-
+  Description:
+
+  The organization manages information system accounts, including:
+
+  a. Identifying and selecting the types of accounts needed to support
+  organizational missions/business functions;
+
+  b. Assigning account managers for system accounts;
+
+  c. Establishing conditions for group and role membership;
+
+  d. Specifying authorized users of the information system, group and role
+  membership, and access authorizations (i.e., privileges) and other attributes
+  (as required) for each account;
+
+  e. Requiring appropriate approvals by [Assignment: organization-defined
+  personnel or roles] for requests to create information system accounts;
+
+  f. Creating, enabling, modifying, disabling, and removing information system
+  accounts in accordance with [Assignment: organization-defined policy,
+  procedures, conditions, and/or circumstances];
+
+  g. Monitoring the use of information system accounts; and
+
+  h. Notifying account managers and [Assignment: organization-defined
+  personnel or roles] when accounts are no longer required; when users are
+  terminated or transferred; and when individual information system usage or
+  need-to-know changes.
+
+
+  Supplemental Guidance:
+
+  Information system account management activities include: account creation,
+  deletion, modification, enabling, disabling, and monitoring. Account
+  managers are responsible for account creation requests, system access
+  provisioning, the modification and enforcing of account policy, account
+  cessation, and handling of accounts over their full lifecycle. If
+  organizations use internal attributes (e.g., encryption keys, digital
+  certificates) for account management, considered the related controls in
+  family IA (Identification and Authentication).
+
+
+ap-acronym: AC-2.1
+cci: 002130
+cci-definition: >-
+  002130: The organization identifies and selects the types of accounts needed
+  to support organizational missions and business functions.
+implementation-guidance: >-
+  UDS Identity Services (Keycloak) provides centralized account lifecycle
+  management. The deployment manages three account types: admin realm users
+  (management plane), OIDC clients (applications), and tenant users
+  (workload plane). Each type follows distinct provisioning workflows via
+  Keycloak provider APIs. The OIDC client for podinfo (lab-sso-app) was
+  auto-provisioned by the UDS Operator from a Package CR, demonstrating
+  declarative account registration. User registration is performed via the
+  Keycloak Welcome Page (http://127.0.0.1:8888) with mandatory first/last
+  name and email validation. All account changes require mutual TLS or OIDC
+  flow authentication; no direct HTTP access is permitted.
+
+
+  Recommended Compelling Evidence:
+
+  1.) Keycloak realm screenshot showing account list (Administration Console at
+  https://keycloak.admin.uds.dev/).
+
+  2.) Package CR YAML defining sso block with account provisioning rules (see
+  ~/projects/defense-unicorns-lab/uds-identity-notes/podinfo-package-cr.yaml).
+
+  3.) Zarf artifact logs showing Keycloak client secret creation for podinfo
+  OIDC client (from zarf-state Secret in kube ns zarf).
+
+assessment-procedures: >-
+  Examine the Keycloak administration console and verify that all configured
+  OIDC clients and user realms exist and are documented. Verify that the
+  UDS Operator reconciles account creation from Package CR specifications.
+  Interview the account manager regarding provisioning procedures and
+  modification controls.
+inherited: false
+remote-inheritance-instance: ""
+compliance-status: Compliant
+test-results: >-
+  Test 1: podinfo OIDC client provisioned by UDS Operator from Package CR
+  (sso block in package spec). Secret sso-client-uds-lab-podinfo confirmed
+  created in lab-sso-app namespace. Test 2: Admin user registration via
+  http://127.0.0.1:8888 Welcome Page (first/last name and email validation).
+  Test 3: Keycloak admin token obtained via client credentials grant (mutual
+  TLS to https://keycloak.uds.dev).
+control-implementation-status: Implemented
+security-control-designation: Applicable - account types and lifecycle management critical for access control
+control-implementation-narrative: >-
+  This lab deployment implements AC-2.1 through centralized Keycloak identity
+  management. Three account types are managed: (1) UDS realm admin accounts
+  (created via Keycloak Welcome Page with first/last name and email
+  validation), (2) OIDC client accounts (auto-provisioned by UDS Operator
+  from Package CR sso blocks; clients authenticate via client credentials
+  or authorization code flows), and (3) tenant user accounts (created in
+  realm-specific containers via Keycloak API, intended for end-user login
+  flows). Account provisioning is declarative for clients (Package CR sso
+  block updates trigger UDS Operator reconciliation) and imperative for
+  users (Welcome Page registration or Keycloak admin API calls). All account
+  modifications and deletions route through either the Keycloak admin console
+  (RBAC-controlled) or programmatic APIs (authenticated via mTLS or client
+  credentials). Monitoring is performed by observing Keycloak event logs
+  (available in Admin Console > Events tab) and Kubernetes event objects
+  (kubectl describe secret sso-client-*). Account cessation is handled by
+  deleting the corresponding Kubernetes Secret or removing the user from
+  Keycloak console; UDS Operator watches Secrets and reconciles issuer status
+  accordingly. This implementation aligns with zero-trust principles: all
+  account operations require cryptographic proof of identity, and account
+  credentials are never transmitted in cleartext (OIDC flows use code exchange,
+  client credentials are stored in Secrets with Kubernetes RBAC, admin access
+  requires mutual TLS).
+uds-alignment: keycloak
+
