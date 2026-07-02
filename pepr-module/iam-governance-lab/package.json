@@ -15,6 +15,7 @@
   "pepr": {
     "uuid": "iam-governance-lab",
     "onError": "reject",
+    "rbacMode": "scoped",
     "webhookTimeout": 10,
     "customLabels": {
       "namespace": {

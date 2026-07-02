@@ -36,24 +36,25 @@ control-information: >-
 
 
 ap-acronym: AC-17.1
-cci: 002415
+cci: '002415'
 cci-definition: >-
   002415: The organization establishes a policy governing the use of remote
   access to the information system.
 implementation-guidance: >-
   UDS Core enforces remote access security through the Istio Ambient mesh and
   OIDC authentication flow. Remote access (browser requests to podinfo via
-  https://podinfo.uds.dev) is secured by: (1) mTLS enforcement between the
-  ingress gateway and pod (Istio Ambient waypoint proxy enforces strict mTLS
-  peer identity), (2) OIDC token validation (Authservice exchanges Bearer
-  tokens with Keycloak and validates signature, expiration, claim scope), (3)
-  session termination (Keycloak issues time-limited access tokens; token
-  refresh requires re-authentication; browsers session cookies expire after
-  configurable lifetime). All remote access attempts are logged by Envoy access
-  logs (captured by Falco/Lula audit pipeline) with metadata: source IP, user
-  identity (X-Remote-User header), timestamp, request path, and response code.
-  Remote access is terminated by Keycloak session timeout or explicit logout
-  (DELETE /logout endpoint).
+  https://podinfo.uds.dev) is secured by: (1) in-mesh mTLS (the ztunnel node
+  agent establishes L4 mTLS between mesh workloads, and AuthorizationPolicy
+  restricts the pod to waypoint-mediated traffic), (2) OIDC validation (the
+  standalone authservice deployment validates sessions and JWTs against
+  Keycloak — signature via the realm JWKS endpoint, expiration, and claims),
+  (3) session termination (Keycloak issues time-limited tokens; sessions end
+  at realm-configured timeouts or via the OIDC end-session endpoint,
+  https://sso.uds.dev/realms/uds/protocol/openid-connect/logout, as published
+  in the realm discovery document). Remote access attempts are recorded in
+  the tenant-gateway Envoy access logs with source IP, timestamp, method,
+  request path, response code, user agent, and request ID; UDS Core also
+  ships Vector and Loki for cluster-wide log aggregation.
 
 
   Recommended Compelling Evidence:
@@ -61,8 +62,9 @@ implementation-guidance: >-
   1.) OIDC token inspection showing expiration claim (exp) and scope
   restrictions (aud, iss claims). 2.) Istio AuthorizationPolicy showing mTLS
   peer requirement. 3.) Keycloak session timeout configuration (Admin Console >
-  Realm > Sessions > Session Settings). 4.) Envoy access logs showing
-  unauthenticated request rejection (403 Forbidden) prior to reaching pod.
+  Realm > Sessions > Session Settings). 4.) Tenant-gateway Envoy access-log
+  entry showing an unauthenticated request answered with the 302 OIDC
+  challenge before ever reaching the pod.
 
 assessment-procedures: >-
   Test 1: Verify OIDC token carries expiration (exp) claim. Test 2: Attempt
@@ -75,38 +77,46 @@ inherited: false
 remote-inheritance-instance: ""
 compliance-status: Compliant
 test-results: >-
-  Test 1: OIDC token from Keycloak includes exp (expiration), aud
-  (podinfo.uds.dev audience), and iss (issuer: https://keycloak.uds.dev/realms/master).
-  Test 2: Authservice rejected request with expired token (403 Forbidden)
-  before pod received it. Test 3: Keycloak realm configured with session
-  timeout of 30 minutes (Admin Console > Realm Settings > Sessions). Test 4:
-  Browser session cookie (keycloak.session) expired after 30 minutes; user
-  redirected to Keycloak login page on next request. Test 5: Envoy access logs
-  captured session termination event: "Unauthenticated=true,
-  Authorization=Bearer expired_token".
+  Test 1: The realm discovery document at
+  https://sso.uds.dev/realms/uds/.well-known/openid-configuration was
+  retrieved and shows issuer https://sso.uds.dev/realms/uds, the JWKS
+  endpoint used for token signature validation, and the end-session
+  (logout) endpoint. Test 5 (partial): The tenant-gateway Envoy access log
+  recorded the unauthenticated request to podinfo.uds.dev with its 302
+  response, source IP, user agent, and request ID. Tests 2-4 (expired-token
+  rejection, session-timeout configuration review, and observed automatic
+  logout) are pending first Keycloak user registration and an Admin Console
+  session.
 control-implementation-status: Implemented
 security-control-designation: Applicable - OIDC and mTLS provide remote access security boundary
 control-implementation-narrative: >-
-  This lab implements AC-17.1 remote access security through a combination of
-  cryptographic (mTLS, token encryption) and policy-based (OIDC, AuthorizationPolicy)
-  controls. Remote access workflow: (1) User opens browser to
-  https://podinfo.uds.dev (TLS 1.3 establishes encrypted transport). (2)
-  Ingress gateway receives request; Authservice intercepts and validates Bearer
-  token. (3) If token missing or invalid, Authservice redirects to Keycloak
-  OIDC authorization endpoint (sso.uds.dev). (4) User authenticates via
-  Keycloak (username/password prompt); Keycloak issues Bearer token (contains
-  exp, aud, iss, custom claims). (5) Browser follows 302 redirect back to
-  podinfo with Bearer token in Authorization header. (6) Authservice validates
-  token (checks signature via Keycloak JWKS endpoint, verifies expiration and
-  audience claim). (7) Waypoint proxy enforces mTLS: verifies gateway identity
-  via mTLS certificate (mutual TLS peer authentication). (8) Pod receives
-  request with X-Remote-User header (injected by Authservice from token
-  claims). (9) Session termination: Keycloak session expires after 30 minutes
-  (configurable); user browser session cookie cleared; next request to
-  podinfo triggers re-authentication flow. All remote access events logged:
-  successful auth (200), failed auth (403), session expiration. This model
-  ensures: (a) remote access requires valid OIDC credentials, (b) in-transit
-  encryption via TLS and mTLS, (c) automatic session termination after
-  configurable timeout, (d) full audit trail of all remote access attempts.
+  This lab implements AC-17.1 remote access security through a combination
+  of cryptographic (TLS, in-mesh mTLS) and policy-based (OIDC,
+  AuthorizationPolicy) controls. Remote access workflow: (1) User opens a
+  browser to https://podinfo.uds.dev; TLS establishes encrypted transport
+  at the tenant ingress gateway. (2) Traffic is routed through the ambient
+  waypoint, where the ext_authz AuthorizationPolicy hands each request to
+  the standalone authservice deployment. (3) With no valid session,
+  authservice responds 302 to the Keycloak authorization endpoint
+  (sso.uds.dev/realms/uds) using the OIDC authorization code flow with a
+  PKCE S256 code challenge. (4) The user authenticates with Keycloak, which
+  redirects back to the application with an authorization code. (5)
+  Authservice exchanges the code for tokens server-side — validating
+  signature via the realm JWKS endpoint, expiration, and audience — and
+  establishes the browser session; bearer tokens are not handed to the
+  browser in this flow. (6) The uds-lab-podinfo-jwt-authn
+  RequestAuthentication and uds-lab-podinfo-jwt-authz DENY policy reject
+  requests with missing, malformed, or expired JWTs. (7) ztunnel enforces
+  L4 mTLS between mesh workloads, and AuthorizationPolicy restricts the pod
+  to waypoint-mediated traffic. (8) Session termination: Keycloak sessions
+  end at realm-configured timeouts (Keycloak defaults until tuned in the
+  Admin Console) or via the OIDC end-session endpoint; the next request
+  restarts the authentication flow. (9) Remote access events are recorded
+  in the tenant-gateway Envoy access logs (source IP, method, path,
+  response code, user agent, request ID), with Vector and Loki deployed for
+  cluster-wide aggregation. This model ensures: (a) remote access requires
+  valid OIDC credentials, (b) in-transit encryption via TLS and in-mesh
+  mTLS, (c) session termination by timeout or logout, (d) an audit trail of
+  remote access attempts.
 uds-alignment: oidc-mtls-remote-access
 

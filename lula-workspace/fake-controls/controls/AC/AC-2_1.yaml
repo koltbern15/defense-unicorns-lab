@@ -44,7 +44,7 @@ control-information: >-
 
 
 ap-acronym: AC-2.1
-cci: 002130
+cci: '002130'
 cci-definition: >-
   002130: The organization identifies and selects the types of accounts needed
   to support organizational missions and business functions.
@@ -55,10 +55,12 @@ implementation-guidance: >-
   (workload plane). Each type follows distinct provisioning workflows via
   Keycloak provider APIs. The OIDC client for podinfo (lab-sso-app) was
   auto-provisioned by the UDS Operator from a Package CR, demonstrating
-  declarative account registration. User registration is performed via the
-  Keycloak Welcome Page (http://127.0.0.1:8888) with mandatory first/last
-  name and email validation. All account changes require mutual TLS or OIDC
-  flow authentication; no direct HTTP access is permitted.
+  declarative account registration. First-admin registration is performed
+  via Keycloak's Welcome Page with mandatory first/last name and email
+  validation (in this lab the page is reached through a port-forward
+  tunnel, since the admin interface is not exposed publicly). Subsequent
+  account changes go through the RBAC-protected Admin Console
+  (keycloak.admin.uds.dev) or authenticated Keycloak APIs.
 
 
   Recommended Compelling Evidence:
@@ -69,8 +71,9 @@ implementation-guidance: >-
   2.) Package CR YAML defining sso block with account provisioning rules (see
   ~/projects/defense-unicorns-lab/uds-identity-notes/podinfo-package-cr.yaml).
 
-  3.) Zarf artifact logs showing Keycloak client secret creation for podinfo
-  OIDC client (from zarf-state Secret in kube ns zarf).
+  3.) The operator-generated OIDC client credential Secret (kubectl get
+  secret sso-client-uds-lab-podinfo -n lab-sso-app — created by the UDS
+  Operator when the Package CR sso block reconciled).
 
 assessment-procedures: >-
   Examine the Keycloak administration console and verify that all configured
@@ -82,12 +85,17 @@ inherited: false
 remote-inheritance-instance: ""
 compliance-status: Compliant
 test-results: >-
-  Test 1: podinfo OIDC client provisioned by UDS Operator from Package CR
-  (sso block in package spec). Secret sso-client-uds-lab-podinfo confirmed
-  created in lab-sso-app namespace. Test 2: Admin user registration via
-  http://127.0.0.1:8888 Welcome Page (first/last name and email validation).
-  Test 3: Keycloak admin token obtained via client credentials grant (mutual
-  TLS to https://keycloak.uds.dev).
+  Test 1: podinfo OIDC client provisioned by the UDS Operator from the
+  Package CR sso block — Secret sso-client-uds-lab-podinfo (Opaque)
+  confirmed present in the lab-sso-app namespace, and the live OIDC
+  challenge redirects with client_id=uds-lab-podinfo against issuer
+  https://sso.uds.dev/realms/uds. Test 2: Declarative reconciliation
+  verified — patching a real spec field on the Package CR (which bumps
+  metadata.generation) forced the operator to re-reconcile the sso client,
+  while label-only changes do not retrigger reconciliation. Test 3
+  (pending): admin user registration via the Keycloak Welcome Page has not
+  been performed yet; no admin or tenant users exist in the realm at this
+  time.
 control-implementation-status: Implemented
 security-control-designation: Applicable - account types and lifecycle management critical for access control
 control-implementation-narrative: >-
@@ -102,16 +110,20 @@ control-implementation-narrative: >-
   block updates trigger UDS Operator reconciliation) and imperative for
   users (Welcome Page registration or Keycloak admin API calls). All account
   modifications and deletions route through either the Keycloak admin console
-  (RBAC-controlled) or programmatic APIs (authenticated via mTLS or client
-  credentials). Monitoring is performed by observing Keycloak event logs
-  (available in Admin Console > Events tab) and Kubernetes event objects
-  (kubectl describe secret sso-client-*). Account cessation is handled by
-  deleting the corresponding Kubernetes Secret or removing the user from
-  Keycloak console; UDS Operator watches Secrets and reconciles issuer status
-  accordingly. This implementation aligns with zero-trust principles: all
-  account operations require cryptographic proof of identity, and account
-  credentials are never transmitted in cleartext (OIDC flows use code exchange,
-  client credentials are stored in Secrets with Kubernetes RBAC, admin access
-  requires mutual TLS).
+  (RBAC-controlled) or authenticated Keycloak admin APIs. Monitoring is
+  currently performed by inspecting the operator-managed client Secrets
+  (kubectl get secret -n lab-sso-app sso-client-uds-lab-podinfo); reviewing
+  Keycloak event logs (Admin Console > Events tab) is the designed
+  monitoring path once admin access is established (pending — see Test 3).
+  Account
+  cessation is declarative for clients — removing the sso block from the
+  Package CR causes the UDS Operator to delete the Keycloak client and its
+  credential Secret — and imperative for users (removal via the Keycloak
+  Admin Console or API). This implementation aligns with zero-trust
+  principles: account operations require authenticated identity, account
+  credentials are never transmitted in cleartext (OIDC flows use
+  authorization-code exchange, client credentials live in Kubernetes
+  Secrets guarded by RBAC), and the admin interfaces are not exposed
+  publicly — they sit behind the admin gateway or a local tunnel.
 uds-alignment: keycloak
 

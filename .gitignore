@@ -34,3 +34,6 @@ zarf-packages/argocd/*.tar.zst
 # Temp
 tmp/
 temp/
+
+# Local rollback artifacts (contains generated webhook TLS material)
+.backup/

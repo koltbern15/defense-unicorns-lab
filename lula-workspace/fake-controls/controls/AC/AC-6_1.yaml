@@ -24,47 +24,51 @@ control-information: >-
 
 
 ap-acronym: AC-6.1
-cci: 002213
+cci: '002213'
 cci-definition: >-
   002213: The organization limits privileges to change the information system
   configuration.
 implementation-guidance: >-
-  The lab implements least privilege through two mechanisms: (1) Kubernetes
-  RBAC for administrative access to clusters (Roles/RoleBindings restrict
-  users to specific namespaces and operations; Pepr controller itself runs
-  as a ServiceAccount with minimal permissions to watch Deployments and
-  mutate/validate webhook requests), and (2) Pepr admission policy that
-  enforces tagging baselines. The Pepr capability mutates all Deployments in
-  the lab-apps namespace to add ownership and cost-center labels (baseline
-  governance), and validates that Deployments carry required labels before
-  admission. Non-compliant deployments are rejected at the API server by the
-  Pepr webhook.
+  The lab implements least privilege through two mechanisms: (1) scoped
+  Kubernetes RBAC for the admission controller itself (the Pepr module is
+  built with rbacMode: scoped, so its ClusterRole is generated from the
+  capabilities it declares — limited to its own PeprStore custom resources
+  and CRD registration; admission requests reach the controller through
+  webhooks, so it needs no read or write access to workload APIs), and (2)
+  a Pepr admission policy that enforces tagging baselines. The Pepr capability mutates Deployments in
+  the lab-apps namespace to add governance labels (governed-by=pepr-iam-policy
+  always, and owner=unassigned when no owner label is set), and validates
+  that Deployments carry a required cost-center label before admission.
+  Non-compliant deployments are rejected at the API server by the Pepr
+  webhook.
 
   Example: A developer attempting to deploy a Deployment without a
-  cost-center label is denied at the API server with message "Deployments
-  must carry a cost-center label (governance baseline)". Privileged
-  developers (e.g., platform engineers) can deploy without labels if they
-  explicitly request a mutation exception (not shown in this lab, but
-  configurable via Pepr policy override capability).
+  cost-center label is denied at the API server with the message
+  "Deployments must carry a 'cost-center' label (governance baseline)."
+  There is no bypass path in the capability — exceptions would require a
+  change to the policy source itself, which is intentional for a
+  governance baseline.
 
 
   Recommended Compelling Evidence:
 
-  1.) Pepr capability YAML showing mutate/validate rules for lab-apps
-  namespace (~/projects/defense-unicorns-lab/pepr-module/iam-governance-lab/
-  src/index.ts).
+  1.) Pepr capability source showing mutate/validate rules for the lab-apps
+  namespace (pepr-module/iam-governance-lab/capabilities/iam-governance.ts).
 
-  2.) Kubernetes RBAC role for Pepr controller (kubectl get role -n pepr-system
-  -o yaml).
+  2.) Generated scoped ClusterRole for the Pepr controller (kubectl get
+  clusterrole pepr-iam-governance-lab -o yaml).
 
-  3.) Live test: Deployment rejection event log (kubectl describe deployment
-  rogue-app -n lab-apps).
+  3.) Live test: server-side dry-run of the noncompliant manifest (kubectl
+  apply --dry-run=server -f test-manifests/noncompliant.yaml) returning the
+  admission denial, and the matching deny decision in the Pepr controller
+  logs (kubectl logs -n pepr-system deploy/pepr-iam-governance-lab).
 
 assessment-procedures: >-
-  Test 1: Verify Pepr ServiceAccount has minimal permissions (kubectl get
-  role -n pepr-system pepr-system). Test 2: Attempt to deploy a Deployment
-  without cost-center label and verify admission denial (kubectl apply -f
-  rogue-app.yaml). Test 3: Deploy compliant Deployment (with cost-center
+  Test 1: Verify the Pepr controller ClusterRole is scoped (kubectl get
+  clusterrole pepr-iam-governance-lab -o yaml — expect only pepr.dev
+  peprstores rules plus CRD create/patch). Test 2: Attempt to deploy a Deployment
+  without a cost-center label and verify admission denial (kubectl apply
+  --dry-run=server -f test-manifests/noncompliant.yaml). Test 3: Deploy compliant Deployment (with cost-center
   label) and verify admission success. Test 4: Inspect mutated Deployment
   labels and confirm Pepr injected owner and governed-by labels. Test 5:
   Examine admission webhook logs in Pepr controller pod for deny decisions.
@@ -72,14 +76,20 @@ inherited: false
 remote-inheritance-instance: ""
 compliance-status: Compliant
 test-results: >-
-  Test 1: Compliant Deployment (cost-center=platform-infra) admitted and
-  mutated with labels owner=unassigned, governed-by=pepr-iam-policy. Test 2:
-  Non-compliant Deployment (missing cost-center) denied at admission with
-  message "Deployments must carry a cost-center label (governance
-  baseline)". Test 3: Pepr webhook logs show deny decision with validation
-  failure reason. Test 4: Pepr ServiceAccount role limited to watch
-  Deployments and mutate webhook admission requests (minimal permissions
-  model verified).
+  Test 1: Compliant Deployment compliant-app (cost-center=it-2740) admitted;
+  the live object carries the injected labels owner=unassigned and
+  governed-by=pepr-iam-policy (kubectl get deployment compliant-app -n
+  lab-apps --show-labels) — mutation verified. Test 2: Non-compliant
+  Deployment rogue-app (missing cost-center) denied at admission in a
+  server-side dry-run with the message "Deployments must carry a
+  'cost-center' label (governance baseline)." Test 3: The Pepr controller
+  log records the structured deny decision for rogue-app (allowed: false,
+  code 400, with the same message) — confirmed via kubectl logs -n
+  pepr-system. Test 4: Module built with rbacMode: scoped; the live
+  ClusterRole pepr-iam-governance-lab contains only pepr.dev/peprstores
+  (create/get/patch/watch) and apiextensions.k8s.io/customresourcedefinitions
+  (create/patch) — confirmed via kubectl after deploy, and the deny/admit
+  behavior in Tests 1-2 was re-verified under the scoped role.
 control-implementation-status: Implemented
 security-control-designation: Applicable - tagging/labeling baseline reduces privilege scope for workload deployment
 control-implementation-narrative: >-
@@ -93,14 +103,18 @@ control-implementation-narrative: >-
   error message. This model enforces least privilege by requiring each
   workload to declare its cost center before deployment; unauthorized
   deployments (those without proper labeling) are rejected outright. The Pepr
-  controller runs under a ServiceAccount with minimal Kubernetes RBAC
-  permissions (watch Deployments, mutate/validate webhooks only). Developers
+  controller runs under a dedicated ServiceAccount whose ClusterRole is
+  generated in Pepr's scoped rbacMode: it can manage its own PeprStore
+  custom resources and register CRDs, and nothing else — admission decisions
+  flow through the mutating/validating webhooks, which require no wildcard
+  API access. Developers
   can only deploy Deployments that pass the Pepr validation policy, ensuring
   no unlabeled (ungoverned) workloads enter the cluster. This mirrors
   real-world Conditional Access policies: device compliance is verified
   before granting access; workload governance is verified before deployment.
-  The policy is declarative and fails safe: if Pepr is unavailable (error
-  behavior: reject), even compliant workloads are blocked (demonstrated in
-  Session 1). This ensures policy is always enforced.
+  The policy is declarative and fails closed: the module sets onError:
+  reject, so if the Pepr controller is unavailable, admission is refused and
+  even compliant workloads are blocked until it recovers. This ensures policy
+  is always enforced.
 uds-alignment: pepr-admission-control
 

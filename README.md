@@ -85,7 +85,7 @@ See: lula-workspace/fake-controls/controls/AC/
 ## Interview Talking Points
 
 **Defensible Claims**:
-- "I deployed UDS Core v1.7 on k3d, verified Keycloak OIDC SSO."
+- "I deployed UDS Core v1.7 on k3d and verified the Keycloak OIDC challenge flow — 302 redirect with PKCE at the gateway, confirmed in the Envoy access logs."
 - "I built a Zarf ArgoCD package from scratch (210MB tarball with SBOM)."
 - "I wrote a Pepr admission policy enforcing governance tagging."
 - "I fixed k3s 1.35 kubelet image resolution using Zarf's internal registry."
