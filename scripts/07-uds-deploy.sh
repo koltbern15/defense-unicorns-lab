@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 mkdir -p ~/projects/defense-unicorns-lab/logs
 cd ~/projects/defense-unicorns-lab

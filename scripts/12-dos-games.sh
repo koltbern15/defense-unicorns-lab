@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 mkdir -p ~/projects/defense-unicorns-lab/logs
 zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 --key=https://zarf.dev/cosign.pub --confirm > ~/projects/defense-unicorns-lab/logs/dos-games-deploy.log 2>&1

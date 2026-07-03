@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e
 if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   echo "brew already installed"

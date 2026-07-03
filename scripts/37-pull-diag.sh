@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 kubectl config use-context k3d-uds >/dev/null
 echo '--- image ref ---'

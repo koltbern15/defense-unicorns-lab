@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 echo '=== register-and-customize-sso-clients.mdx (first 80 lines) ==='
 sed -n '1,80p' ~/repos/uds-core/docs/how-to-guides/identity-and-authorization/register-and-customize-sso-clients.mdx
 echo ''

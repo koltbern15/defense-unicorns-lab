@@ -1,6 +1,9 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 echo '=== preserve scripts into lab folder ==='
-SP="/mnt/c/Users/ktber/AppData/Local/Temp/claude/C--Users-ktber-projects-Defense-Unicorns/c435975b-423c-4956-9563-a8ecdbf6d5eb/scratchpad"
+# HISTORICAL (build log): scripts were preserved from a one-time local dir during
+# the original build; the results are the numbered scripts in this directory.
+SP="/path/to/local-staging"  # original staging dir (removed for publication)
 mkdir -p ~/projects/defense-unicorns-lab/scripts ~/projects/defense-unicorns-lab/uds-identity-notes
 for f in "$SP"/wsl-scripts/*.sh; do tr -d '\r' < "$f" > ~/projects/defense-unicorns-lab/scripts/"$(basename "$f")"; done
 for f in "$SP"/pepr-files/*; do tr -d '\r' < "$f" > ~/projects/defense-unicorns-lab/uds-identity-notes/"$(basename "$f")"; done

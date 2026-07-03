@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 mkdir -p ~/projects/defense-unicorns-lab/zarf-packages/argocd

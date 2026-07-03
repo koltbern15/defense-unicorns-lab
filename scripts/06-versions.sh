@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 echo "zarf path: $(command -v zarf)"
 zarf version 2>/dev/null

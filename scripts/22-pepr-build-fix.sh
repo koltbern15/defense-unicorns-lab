@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e
 MOD=~/projects/defense-unicorns-lab/pepr-module/iam-governance-lab
 cd "$MOD"

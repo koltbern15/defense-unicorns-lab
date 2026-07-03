@@ -58,18 +58,26 @@ Access services:
 - Podinfo (SSO): https://podinfo.uds.dev (302 → Keycloak OIDC)
 - Grafana: https://grafana.admin.uds.dev
 
+Note: the Quick Start assumes the clusters already exist locally — they were
+built in Phases 0-3 (see the numbered scripts and scripts/README.md). This
+repo is the record of a built lab, not a one-command installer.
+
 ## File Structure
 
 ```
 defense-unicorns-lab/
 ├── README.md
-├── scripts/ (38 utilities)
-├── logs/ (deployment logs)
-├── zarf-packages/argocd/ (built tarball)
-├── pepr-module/iam-governance-lab/ (admission policy)
-├── lula-workspace/fake-controls/ (13 AC controls)
-└── uds-identity-notes/ (podinfo workload)
+├── LICENSE
+├── scripts/                          (46 utilities — see scripts/README.md)
+├── lula-workspace/fake-controls/     (13 NIST AC controls; 4 with narratives)
+├── pepr-module/iam-governance-lab/   (admission policy source)
+├── uds-identity-notes/               (podinfo workload + Package CR manifests)
+└── zarf-packages/argocd/             (zarf.yaml + values; tarball built locally)
 ```
+
+Local-only, intentionally not in the repo (gitignored): logs/, built package
+tarballs (the 210MB ArgoCD .tar.zst rebuilds with scripts/15-zarf-build.sh),
+pepr dist/ output, and node_modules/.
 
 ## Control Narratives (Phase 6)
 
@@ -103,6 +111,32 @@ See: lula-workspace/fake-controls/controls/AC/
 3. Waypoint labeling on Service (not just Pod)
 4. Docker socket drop on WSL restart → Restart Docker Desktop
 5. WSL cross-shell scripting → Use bash <(tr -d '\r' < script.sh) pattern
+
+## How This Was Built
+
+I designed, drove, and operated this lab, working with Claude Code
+(Anthropic's CLI agent) as an infrastructure pair-programmer. The division of
+labor was deliberate: I set the goals and phases, made the architecture calls,
+did the hands-on work (Keycloak, the Lula control workspace, verification at
+every step), and decided what was true enough to publish. Claude accelerated
+the mechanical side — scripting, log archaeology, and running down parallel
+debugging paths.
+
+Two things worth knowing about the process:
+
+- The debugging was real. The three-layer ImagePullBackOff fix (k3s 1.35
+  kubelet image-resolution semantics → seeding the Zarf internal registry) and
+  the waypoint Service-labeling gap in Known Fixes were diagnosed against live
+  clusters, not copied from docs.
+- Before publishing, every compliance narrative in lula-workspace/ was
+  adversarially audited against the running clusters. Claims that couldn't be
+  reproduced with a command were rewritten or marked pending — and one finding
+  (the Pepr controller running with default admin RBAC while the AC-6
+  narrative claimed least privilege) was fixed in the infrastructure itself
+  (rbacMode: scoped), not papered over in the narrative.
+
+Every claim in the control narratives is reproducible with the commands cited
+in their evidence sections.
 
 ## Built By
 

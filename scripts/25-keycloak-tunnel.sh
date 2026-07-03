@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 if pgrep -f 'zarf connect keycloak' >/dev/null; then echo "tunnel already running"; exit 0; fi
 cp ~/.kube/config /tmp/kubeconfig-uds

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 if ! k3d cluster list 2>/dev/null | grep -q zarf-tutorial; then

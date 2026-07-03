@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Build outputs
 dist/
@@ -37,3 +36,16 @@ temp/
 
 # Local rollback artifacts (contains generated webhook TLS material)
 .backup/
+
+# Credentials and cluster config — never commit
+kubeconfig*
+*.kubeconfig
+*.key
+*.pem
+*.crt
+insecure*
+
+# Tooling state
+*.tsbuildinfo
+.claude/
+.pepr/

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 echo '=== pod status summary ==='
 kubectl get pods -A --no-headers | awk '{print $4}' | sort | uniq -c

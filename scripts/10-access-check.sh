@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 echo '=== connect shortcuts ==='
 uds zarf connect list 2>&1 | tail -12

@@ -46,6 +46,12 @@ kind: Service
 metadata:
   name: podinfo
   namespace: lab-sso-app
+  labels:
+    # Applied manually during the lab: the UDS operator labeled the pod but not
+    # the Service, so tenant-gateway traffic bypassed the waypoint (HBONE
+    # "delayed connect error"). Possible uds-core bug — see README Known Fixes #3.
+    istio.io/use-waypoint: uds-lab-podinfo-waypoint
+    istio.io/ingress-use-waypoint: "true"
 spec:
   selector:
     app: podinfo

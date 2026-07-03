@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 echo '=== keycloak admin docs in uds-core ==='
 grep -rln 'admin' ~/repos/uds-core/docs 2>/dev/null | grep -i -E 'keycloak|idam|identity' | head -5
 grep -rn -i 'admin user' ~/repos/uds-core/docs 2>/dev/null | head -8

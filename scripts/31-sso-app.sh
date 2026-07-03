@@ -1,6 +1,9 @@
+#!/usr/bin/env bash
 set -e
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-SP="/mnt/c/Users/ktber/AppData/Local/Temp/claude/C--Users-ktber-projects-Defense-Unicorns/c435975b-423c-4956-9563-a8ecdbf6d5eb/scratchpad/pepr-files"
+# HISTORICAL (build log): manifests were staged from a one-time local dir during
+# the original build; they now live in this repo under uds-identity-notes/.
+SP="/path/to/local-staging/pepr-files"  # original staging dir (removed for publication)
 kubectl config use-context k3d-uds >/dev/null
 mkdir -p ~/projects/defense-unicorns-lab/uds-identity-notes
 tr -d '\r' < "$SP/podinfo-app.yaml" > ~/projects/defense-unicorns-lab/uds-identity-notes/podinfo-app.yaml

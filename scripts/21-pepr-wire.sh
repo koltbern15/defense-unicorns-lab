@@ -1,5 +1,8 @@
+#!/usr/bin/env bash
 set -e
-SP="/mnt/c/Users/ktber/AppData/Local/Temp/claude/C--Users-ktber-projects-Defense-Unicorns/c435975b-423c-4956-9563-a8ecdbf6d5eb/scratchpad/pepr-files"
+# HISTORICAL (build log): sources were staged from a one-time local dir during the
+# original build; they now live in this repo under pepr-module/iam-governance-lab/.
+SP="/path/to/local-staging/pepr-files"  # original staging dir (removed for publication)
 MOD=~/projects/defense-unicorns-lab/pepr-module/iam-governance-lab
 
 tr -d '\r' < "$SP/iam-governance.ts" > "$MOD/capabilities/iam-governance.ts"

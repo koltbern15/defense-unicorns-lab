@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 echo '=== uds zarf connect help ==='
 uds zarf connect --help 2>&1 | head -30

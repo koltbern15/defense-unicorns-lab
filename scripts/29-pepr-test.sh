@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 kubectl config use-context k3d-zarf-tutorial >/dev/null
