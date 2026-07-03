@@ -140,6 +140,6 @@ in their evidence sections.
 
 ## Built By
 
-Kolton Bernhardt, 2026-07-01. Personal interview prep lab.
+Kolton Bernhardt, 2026-07-01. Personal Prep Lab.
 
 See lula-workspace/fake-controls/controls/AC/ for compliance narratives.
