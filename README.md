@@ -1,4 +1,4 @@
-# Defense Unicorns Lab — Interview Prep Build
+# Defense Unicorns Lab — Build
 
 A hands-on Kubernetes security and governance lab built with **UDS Core**, **Zarf**, **Pepr**, and **Keycloak** for demonstrating cloud-native zero-trust principles in action.
 
